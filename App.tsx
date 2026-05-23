@@ -5,9 +5,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { LoginScreen } from './src/screens/LoginScreen';
-import { HomeScreen } from './src/screens/HomeScreen';
+import { ChatScreen } from './src/screens/ChatScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { getProfiles } from './src/api/profile';
+import { setupNotifications } from './src/notifications';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,6 +26,7 @@ function RootNavigator() {
 
       setCheckingProfile(true);
       try {
+        await setupNotifications();
         const profiles = await getProfiles();
         setHasProfile(profiles.length > 0);
       } catch {
@@ -48,7 +50,7 @@ function RootNavigator() {
       <Stack.Navigator>
         {token ? (
           hasProfile ? (
-            <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Language Learning' }} />
+            <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Language Learning' }} />
           ) : (
             <Stack.Screen name="Onboarding" options={{ headerShown: false }}>
               {() => <OnboardingScreen onComplete={() => setHasProfile(true)} />}
