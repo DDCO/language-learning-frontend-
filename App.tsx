@@ -1,18 +1,41 @@
 import 'react-native-gesture-handler';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { getProfiles } from './src/api/profile';
 
 const Stack = createNativeStackNavigator();
 
 function RootNavigator() {
   const { token, loading } = useAuth();
+  const [checkingProfile, setCheckingProfile] = useState(false);
+  const [hasProfile, setHasProfile] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    (async () => {
+      if (!token) {
+        setHasProfile(false);
+        return;
+      }
+
+      setCheckingProfile(true);
+      try {
+        const profiles = await getProfiles();
+        setHasProfile(profiles.length > 0);
+      } catch {
+        setHasProfile(false);
+      } finally {
+        setCheckingProfile(false);
+      }
+    })();
+  }, [token]);
+
+  if (loading || checkingProfile) {
     return (
       <View style={{ flex: 1, justifyContent: 'center' }}>
         <ActivityIndicator />
@@ -24,7 +47,13 @@ function RootNavigator() {
     <NavigationContainer>
       <Stack.Navigator>
         {token ? (
-          <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Language Learning' }} />
+          hasProfile ? (
+            <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Language Learning' }} />
+          ) : (
+            <Stack.Screen name="Onboarding" options={{ headerShown: false }}>
+              {() => <OnboardingScreen onComplete={() => setHasProfile(true)} />}
+            </Stack.Screen>
+          )
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         )}

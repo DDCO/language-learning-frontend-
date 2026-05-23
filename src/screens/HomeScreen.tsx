@@ -3,6 +3,7 @@ import { ActivityIndicator, Button, FlatList, StyleSheet, Text, View } from 'rea
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ApiEnvelope, ConversationList, Profile } from '../types/api';
+import { getProfiles } from '../api/profile';
 
 export function HomeScreen() {
   const { signOut } = useAuth();
@@ -13,9 +14,9 @@ export function HomeScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const profileRes = await api.get<ApiEnvelope<Profile[]>>('/profiles');
+        const profiles = await getProfiles();
         const convoRes = await api.get<ApiEnvelope<ConversationList>>('/conversations?limit=20&page=1');
-        setProfiles(profileRes.data.data);
+        setProfiles(profiles);
         setConversations(convoRes.data.data.items);
       } finally {
         setLoading(false);
