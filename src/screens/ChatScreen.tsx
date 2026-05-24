@@ -323,7 +323,7 @@ export function ChatScreen() {
 
       <FlatList
         ref={listRef}
-        style={styles.messagesList}
+        style={[styles.messagesList, { marginBottom: listBottomInset }]}
         data={sortedMessages}
         keyExtractor={(_, i) => String(i)}
         keyboardShouldPersistTaps="handled"
@@ -334,7 +334,6 @@ export function ChatScreen() {
           styles.list,
           { paddingBottom: 12 },
         ]}
-        ListFooterComponent={<View style={{ height: listBottomInset }} />}
         renderItem={({ item }) => (
           <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
             <Text style={styles.role}>{item.role === 'user' ? 'You' : 'Tutor'}</Text>
