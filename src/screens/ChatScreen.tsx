@@ -320,7 +320,17 @@ export function ChatScreen() {
         ListEmptyComponent={<Text style={{ color: '#666' }}>Start chatting to begin your conversation.</Text>}
       />
 
-      <View style={[styles.inputRow, { paddingBottom: insets.bottom + 8 }]}> 
+      <View
+        style={[
+          styles.inputRow,
+          {
+            paddingBottom:
+              insets.bottom +
+              8 +
+              (Platform.OS === 'android' ? Math.max(0, keyboardHeight - insets.bottom) : 0),
+          },
+        ]}
+      >
         <TextInput
           value={input}
           onChangeText={setInput}
