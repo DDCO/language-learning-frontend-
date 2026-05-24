@@ -198,6 +198,13 @@ export function ChatScreen() {
     );
   };
 
+  const frequencyValue = Math.max(1, Number(frequencyHours) || 24);
+
+  const adjustFrequency = (delta: number) => {
+    const next = Math.max(1, frequencyValue + delta);
+    setFrequencyHours(String(next));
+  };
+
   const saveProfile = async () => {
     const p = await ensureProfile();
     const hours = Number(frequencyHours);
@@ -390,13 +397,21 @@ export function ChatScreen() {
               })}
             </View>
             <Text style={styles.label}>Check frequency (hours)</Text>
-            <TextInput
-              value={frequencyHours}
-              onChangeText={setFrequencyHours}
-              keyboardType="number-pad"
-              style={styles.settingsInput}
-              editable={!busy}
-            />
+            <View style={styles.frequencyRow}>
+              <Pressable style={styles.stepperBtn} onPress={() => adjustFrequency(-1)} disabled={busy}>
+                <Text style={styles.stepperText}>-</Text>
+              </Pressable>
+              <TextInput
+                value={frequencyHours}
+                onChangeText={(v) => setFrequencyHours(v.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
+                style={[styles.settingsInput, styles.frequencyInput]}
+                editable={!busy}
+              />
+              <Pressable style={styles.stepperBtn} onPress={() => adjustFrequency(1)} disabled={busy}>
+                <Text style={styles.stepperText}>+</Text>
+              </Pressable>
+            </View>
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.secondaryBtn} onPress={() => setSidebarView('menu')} disabled={busy}>
                 <Text>Back</Text>
@@ -465,6 +480,19 @@ const styles = StyleSheet.create({
   secondaryBtn: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16 },
   primaryBtn: { backgroundColor: '#111827', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16 },
   primaryBtnText: { color: '#fff', fontWeight: '700' },
+  frequencyRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  frequencyInput: { flex: 1, textAlign: 'center' },
+  stepperBtn: {
+    width: 40,
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  stepperText: { fontSize: 22, lineHeight: 22 },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     borderWidth: 1,
