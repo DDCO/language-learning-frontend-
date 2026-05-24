@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../context/AuthContext';
 import { exchangeGoogleIdToken } from '../api/auth';
@@ -11,14 +12,25 @@ WebBrowser.maybeCompleteAuthSession();
 export function LoginScreen() {
   const { signInWithToken } = useAuth();
   const [manualToken, setManualToken] = useState('');
+  const redirectUri = makeRedirectUri({
+    native: `${config.googleAndroidRedirectScheme}:/oauthredirect`,
+  });
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     webClientId: config.googleWebClientId,
     androidClientId: config.googleAndroidClientId,
+    redirectUri,
   });
 
   useEffect(() => {
     (async () => {
+      if (response?.type === 'error') {
+        const message =
+          response.params?.error_description || response.params?.error || 'Unknown Google OAuth error';
+        Alert.alert('Google sign-in failed', message);
+        return;
+      }
+
       if (response?.type !== 'success') return;
       const idToken = response.params.id_token;
       if (!idToken) {
@@ -29,8 +41,10 @@ export function LoginScreen() {
       try {
         const auth = await exchangeGoogleIdToken(idToken);
         await signInWithToken(auth.access_token);
-      } catch {
-        Alert.alert('Login failed', 'Could not exchange Google token with backend.');
+      } catch (error: any) {
+        const backendMessage =
+          error?.response?.data?.message || error?.message || 'Could not exchange Google token with backend.';
+        Alert.alert('Login failed', String(backendMessage));
       }
     })();
   }, [response, signInWithToken]);
