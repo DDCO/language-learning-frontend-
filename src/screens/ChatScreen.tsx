@@ -235,6 +235,7 @@ export function ChatScreen() {
           value={input}
           onChangeText={setInput}
           placeholder="Type a message..."
+          placeholderTextColor="#111"
           style={styles.input}
           editable={!busy}
         />
