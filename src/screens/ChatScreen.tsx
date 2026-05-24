@@ -23,6 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import { INTEREST_OPTIONS } from '../constants/profileOptions';
 
 const CHAT_CACHE_PATH = `${FileSystem.documentDirectory}chat-last-conversation-v1.json`;
+const normalizeInterest = (v: string) => v.trim().toLowerCase();
 
 export function ChatScreen() {
   const insets = useSafeAreaInsets();
@@ -112,7 +113,7 @@ export function ChatScreen() {
         if (profiles.length) {
           setProfileId(profiles[0].id);
           setTargetLanguage(profiles[0].targetLanguage);
-          setSelectedInterests(profiles[0].interests || []);
+          setSelectedInterests((profiles[0].interests || []).map(normalizeInterest));
           setFrequencyHours(String(profiles[0].checkFrequencyHours || 24));
         }
 
@@ -187,14 +188,15 @@ export function ChatScreen() {
     if (!profiles.length) throw new Error('No profile found');
     setProfileId(profiles[0].id);
     setTargetLanguage(profiles[0].targetLanguage);
-    setSelectedInterests(profiles[0].interests || []);
+    setSelectedInterests((profiles[0].interests || []).map(normalizeInterest));
     setFrequencyHours(String(profiles[0].checkFrequencyHours || 24));
     return { profileId: profiles[0].id, targetLanguage: profiles[0].targetLanguage };
   };
 
   const toggleInterest = (interest: string) => {
+    const normalized = normalizeInterest(interest);
     setSelectedInterests((prev) =>
-      prev.includes(interest) ? prev.filter((i) => i !== interest) : [...prev, interest],
+      prev.includes(normalized) ? prev.filter((i) => i !== normalized) : [...prev, normalized],
     );
   };
 
@@ -216,7 +218,7 @@ export function ChatScreen() {
 
     setBusy(true);
     try {
-      await updateProfileInterests(p.profileId, selectedInterests);
+      await updateProfileInterests(p.profileId, selectedInterests.map(normalizeInterest));
       await updateProfileCheckFrequency(p.profileId, hours);
       setSidebarView('menu');
     } catch {
@@ -383,7 +385,7 @@ export function ChatScreen() {
             <Text style={styles.label}>Interests</Text>
             <View style={styles.chipsWrap}>
               {INTEREST_OPTIONS.map((interest) => {
-                const active = selectedInterests.includes(interest);
+                const active = selectedInterests.includes(normalizeInterest(interest));
                 return (
                   <Pressable
                     key={interest}
