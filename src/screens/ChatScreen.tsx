@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import * as FileSystem from 'expo-file-system/legacy';
 import {
   Alert,
   Animated,
@@ -21,7 +21,7 @@ import { getProfiles, updateProfileCheckFrequency, updateProfileInterests } from
 import { getConversations, sendMessage, startConversation, ConversationMessage } from '../api/conversation';
 import { useAuth } from '../context/AuthContext';
 
-const CHAT_CACHE_KEY = 'chat:lastConversation:v1';
+const CHAT_CACHE_PATH = `${FileSystem.documentDirectory}chat-last-conversation-v1.json`;
 
 export function ChatScreen() {
   const insets = useSafeAreaInsets();
@@ -75,15 +75,33 @@ export function ChatScreen() {
     };
   }, [composerBottom, insets.bottom]);
 
+  const readCachedChat = async (): Promise<{ conversationId?: string; messages?: ConversationMessage[] } | null> => {
+    try {
+      const info = await FileSystem.getInfoAsync(CHAT_CACHE_PATH);
+      if (!info.exists) return null;
+      const content = await FileSystem.readAsStringAsync(CHAT_CACHE_PATH);
+      return JSON.parse(content);
+    } catch {
+      return null;
+    }
+  };
+
+  const writeCachedChat = async (payload: { conversationId?: string | null; messages: ConversationMessage[] }) => {
+    try {
+      await FileSystem.writeAsStringAsync(CHAT_CACHE_PATH, JSON.stringify(payload));
+    } catch {
+      // no-op
+    }
+  };
+
   React.useEffect(() => {
     const loadLatestConversation = async () => {
       try {
         let cachedConversationId: string | undefined;
         let cachedMessages: ConversationMessage[] = [];
 
-        const cached = await SecureStore.getItemAsync(CHAT_CACHE_KEY);
-        if (cached) {
-          const parsed = JSON.parse(cached) as { conversationId?: string; messages?: ConversationMessage[] };
+        const parsed = await readCachedChat();
+        if (parsed) {
           cachedConversationId = parsed.conversationId;
           cachedMessages = parsed.messages || [];
           if (cachedConversationId) setConversationId(cachedConversationId);
@@ -111,13 +129,10 @@ export function ChatScreen() {
             setMessages(latestMessages);
           }
 
-          await SecureStore.setItemAsync(
-            CHAT_CACHE_KEY,
-            JSON.stringify({
-              conversationId: shouldUseLatest ? latest.id : cachedConversationId,
-              messages: shouldUseLatest ? latestMessages : cachedMessages,
-            }),
-          );
+          await writeCachedChat({
+            conversationId: shouldUseLatest ? latest.id : cachedConversationId,
+            messages: shouldUseLatest ? latestMessages : cachedMessages,
+          });
         }
       } catch {
         // no-op: allow empty chat for first-time users
@@ -129,14 +144,7 @@ export function ChatScreen() {
 
   React.useEffect(() => {
     const persist = async () => {
-      try {
-        await SecureStore.setItemAsync(
-          CHAT_CACHE_KEY,
-          JSON.stringify({ conversationId, messages }),
-        );
-      } catch {
-        // no-op
-      }
+      await writeCachedChat({ conversationId, messages });
     };
     persist();
   }, [conversationId, messages]);
@@ -300,6 +308,8 @@ export function ChatScreen() {
         data={sortedMessages}
         keyExtractor={(_, i) => String(i)}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator
+        persistentScrollbar={Platform.OS === 'android'}
         contentContainerStyle={[
           styles.list,
           {
@@ -313,7 +323,7 @@ export function ChatScreen() {
         renderItem={({ item }) => (
           <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
             <Text style={styles.role}>{item.role === 'user' ? 'You' : 'Tutor'}</Text>
-            <Text>{item.content}</Text>
+            <Text style={styles.messageText}>{item.content}</Text>
           </View>
         )}
         ListEmptyComponent={<Text style={{ color: '#666' }}>Start chatting to begin your conversation.</Text>}
@@ -403,6 +413,7 @@ const styles = StyleSheet.create({
   userBubble: { backgroundColor: '#daf0ff', alignSelf: 'flex-end' },
   aiBubble: { backgroundColor: '#f2f2f2', alignSelf: 'flex-start' },
   role: { fontSize: 12, color: '#666', marginBottom: 4 },
+  messageText: { flexShrink: 1, flexWrap: 'wrap' },
   inputRow: {
     position: 'absolute',
     left: 12,
