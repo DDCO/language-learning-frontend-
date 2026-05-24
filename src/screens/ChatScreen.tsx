@@ -44,8 +44,7 @@ export function ChatScreen() {
     const showSub = Keyboard.addListener(showEvent, (e) => {
       const rawKeyboardHeight = e.endCoordinates?.height || 0;
       setKeyboardHeight(rawKeyboardHeight);
-      const extraOffset = Platform.OS === 'android' ? 56 : 8;
-      const targetBottom = rawKeyboardHeight + insets.bottom + extraOffset;
+      const targetBottom = rawKeyboardHeight + (Platform.OS === 'android' ? 4 : 8);
       Animated.timing(composerBottom, {
         toValue: targetBottom,
         duration: Platform.OS === 'ios' ? 220 : 180,
@@ -208,7 +207,7 @@ export function ChatScreen() {
             paddingBottom:
               composerHeight +
               (keyboardHeight > 0
-                ? keyboardHeight + insets.bottom + (Platform.OS === 'android' ? 72 : 24)
+                ? keyboardHeight + (Platform.OS === 'android' ? 20 : 24)
                 : insets.bottom + 16),
           },
         ]}
