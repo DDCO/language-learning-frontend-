@@ -78,11 +78,16 @@ export function ChatScreen() {
   React.useEffect(() => {
     const loadLatestConversation = async () => {
       try {
+        let cachedConversationId: string | undefined;
+        let cachedMessages: ConversationMessage[] = [];
+
         const cached = await SecureStore.getItemAsync(CHAT_CACHE_KEY);
         if (cached) {
           const parsed = JSON.parse(cached) as { conversationId?: string; messages?: ConversationMessage[] };
-          if (parsed.conversationId) setConversationId(parsed.conversationId);
-          if (parsed.messages?.length) setMessages(parsed.messages);
+          cachedConversationId = parsed.conversationId;
+          cachedMessages = parsed.messages || [];
+          if (cachedConversationId) setConversationId(cachedConversationId);
+          if (cachedMessages.length) setMessages(cachedMessages);
         }
 
         const profiles = await getProfiles();
@@ -96,11 +101,22 @@ export function ChatScreen() {
         const response = await getConversations({ page: 1, limit: 1 });
         const latest = response.items?.[0];
         if (latest) {
-          setConversationId(latest.id);
-          setMessages(latest.messages || []);
+          const latestMessages = latest.messages || [];
+          const shouldUseLatest =
+            !cachedMessages.length ||
+            latestMessages.length >= cachedMessages.length;
+
+          if (shouldUseLatest) {
+            setConversationId(latest.id);
+            setMessages(latestMessages);
+          }
+
           await SecureStore.setItemAsync(
             CHAT_CACHE_KEY,
-            JSON.stringify({ conversationId: latest.id, messages: latest.messages || [] }),
+            JSON.stringify({
+              conversationId: shouldUseLatest ? latest.id : cachedConversationId,
+              messages: shouldUseLatest ? latestMessages : cachedMessages,
+            }),
           );
         }
       } catch {
