@@ -4,7 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../context/AuthContext';
 import { exchangeGoogleIdToken } from '../api/auth';
-import { config } from '../config';
+import { config, isGoogleOAuthConfigured } from '../config';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -39,9 +39,14 @@ export function LoginScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Language Learning</Text>
       <Text style={styles.subtitle}>Sign in with Google to continue</Text>
+      {!isGoogleOAuthConfigured() ? (
+        <Text style={styles.warning}>
+          Google OAuth is not configured in this app build.
+        </Text>
+      ) : null}
       <Button
         title="Continue with Google"
-        disabled={!request}
+        disabled={!request || !isGoogleOAuthConfigured()}
         onPress={() => promptAsync()}
       />
 
@@ -71,6 +76,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, justifyContent: 'center', gap: 12 },
   title: { fontSize: 28, fontWeight: '700' },
   subtitle: { color: '#555' },
+  warning: { color: '#b45309' },
   or: { textAlign: 'center', marginVertical: 8, color: '#666' },
   input: {
     borderWidth: 1,
