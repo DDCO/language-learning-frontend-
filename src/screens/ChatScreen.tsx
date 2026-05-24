@@ -41,6 +41,11 @@ export function ChatScreen() {
   const [composerHeight, setComposerHeight] = useState(72);
   const [composerBottom] = useState(new Animated.Value(12));
   const listRef = React.useRef<FlatList<ConversationMessage>>(null);
+  const listBottomInset =
+    composerHeight +
+    (keyboardHeight > 0
+      ? keyboardHeight + (Platform.OS === 'android' ? 20 : 24)
+      : insets.bottom + 16);
 
   const scrollToBottom = React.useCallback((animated = true) => {
     requestAnimationFrame(() => {
@@ -86,7 +91,7 @@ export function ChatScreen() {
     if (messages.length) {
       scrollToBottom(false);
     }
-  }, [messages.length, keyboardHeight, scrollToBottom]);
+  }, [messages.length, keyboardHeight, listBottomInset, scrollToBottom]);
 
   const readCachedChat = async (): Promise<{ conversationId?: string; messages?: ConversationMessage[] } | null> => {
     try {
@@ -324,16 +329,12 @@ export function ChatScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator
         persistentScrollbar={Platform.OS === 'android'}
+        scrollIndicatorInsets={{ bottom: listBottomInset }}
         contentContainerStyle={[
           styles.list,
-          {
-            paddingBottom:
-              composerHeight +
-              (keyboardHeight > 0
-                ? keyboardHeight + (Platform.OS === 'android' ? 20 : 24)
-                : insets.bottom + 16),
-          },
+          { paddingBottom: 12 },
         ]}
+        ListFooterComponent={<View style={{ height: listBottomInset }} />}
         renderItem={({ item }) => (
           <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
             <Text style={styles.role}>{item.role === 'user' ? 'You' : 'Tutor'}</Text>
