@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProfiles, updateProfileCheckFrequency, updateProfileInterests } from '../api/profile';
 import { getConversations, sendMessage, startConversation, ConversationMessage } from '../api/conversation';
 import { useAuth } from '../context/AuthContext';
+import { INTEREST_OPTIONS } from '../constants/profileOptions';
 
 const CHAT_CACHE_PATH = `${FileSystem.documentDirectory}chat-last-conversation-v1.json`;
 
@@ -33,7 +34,7 @@ export function ChatScreen() {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarView, setSidebarView] = useState<'menu' | 'edit'>('menu');
-  const [interestsInput, setInterestsInput] = useState('');
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [frequencyHours, setFrequencyHours] = useState('24');
   const [busy, setBusy] = useState(false);
   const [slideX] = useState(new Animated.Value(320));
@@ -111,7 +112,7 @@ export function ChatScreen() {
         if (profiles.length) {
           setProfileId(profiles[0].id);
           setTargetLanguage(profiles[0].targetLanguage);
-          setInterestsInput((profiles[0].interests || []).join(','));
+          setSelectedInterests(profiles[0].interests || []);
           setFrequencyHours(String(profiles[0].checkFrequencyHours || 24));
         }
 
@@ -186,27 +187,29 @@ export function ChatScreen() {
     if (!profiles.length) throw new Error('No profile found');
     setProfileId(profiles[0].id);
     setTargetLanguage(profiles[0].targetLanguage);
-    setInterestsInput((profiles[0].interests || []).join(','));
+    setSelectedInterests(profiles[0].interests || []);
     setFrequencyHours(String(profiles[0].checkFrequencyHours || 24));
     return { profileId: profiles[0].id, targetLanguage: profiles[0].targetLanguage };
   };
 
+  const toggleInterest = (interest: string) => {
+    setSelectedInterests((prev) =>
+      prev.includes(interest) ? prev.filter((i) => i !== interest) : [...prev, interest],
+    );
+  };
+
   const saveProfile = async () => {
     const p = await ensureProfile();
-    const interests = interestsInput
-      .split(',')
-      .map((v) => v.trim())
-      .filter(Boolean);
     const hours = Number(frequencyHours);
 
-    if (!interests.length || !Number.isFinite(hours) || hours < 1) {
+    if (!selectedInterests.length || !Number.isFinite(hours) || hours < 1) {
       Alert.alert('Invalid profile', 'Please provide interests and a valid frequency.');
       return;
     }
 
     setBusy(true);
     try {
-      await updateProfileInterests(p.profileId, interests);
+      await updateProfileInterests(p.profileId, selectedInterests);
       await updateProfileCheckFrequency(p.profileId, hours);
       setSidebarView('menu');
     } catch {
@@ -370,8 +373,22 @@ export function ChatScreen() {
             <Text style={styles.sidebarTitle}>Edit profile</Text>
             <Text style={styles.label}>Target language</Text>
             <Text style={styles.readonly}>{targetLanguage}</Text>
-            <Text style={styles.label}>Interests (comma-separated)</Text>
-            <TextInput value={interestsInput} onChangeText={setInterestsInput} style={styles.settingsInput} editable={!busy} />
+            <Text style={styles.label}>Interests</Text>
+            <View style={styles.chipsWrap}>
+              {INTEREST_OPTIONS.map((interest) => {
+                const active = selectedInterests.includes(interest);
+                return (
+                  <Pressable
+                    key={interest}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => toggleInterest(interest)}
+                    disabled={busy}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{interest}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
             <Text style={styles.label}>Check frequency (hours)</Text>
             <TextInput
               value={frequencyHours}
@@ -448,4 +465,16 @@ const styles = StyleSheet.create({
   secondaryBtn: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16 },
   primaryBtn: { backgroundColor: '#111827', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16 },
   primaryBtnText: { color: '#fff', fontWeight: '700' },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: '#f8fafc',
+  },
+  chipActive: { backgroundColor: '#111827', borderColor: '#111827' },
+  chipText: { color: '#111827', textTransform: 'capitalize' },
+  chipTextActive: { color: '#fff' },
 });

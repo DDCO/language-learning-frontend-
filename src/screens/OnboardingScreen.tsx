@@ -1,36 +1,13 @@
 import React, { useState } from 'react';
 import { Alert, Button, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createProfile } from '../api/profile';
-
-const SUGGESTED_INTERESTS = ['technology', 'sports', 'music', 'movies', 'history', 'science'];
-const LANGUAGE_OPTIONS = [
-  'Portuguese',
-  'Spanish',
-  'French',
-  'German',
-  'Italian',
-  'Japanese',
-  'Korean',
-  'Mandarin Chinese',
-  'Arabic',
-  'Hindi',
-  'Russian',
-  'Turkish',
-  'Dutch',
-  'Swedish',
-  'Polish',
-  'Greek',
-  'Hebrew',
-  'Vietnamese',
-  'Thai',
-  'Indonesian',
-];
+import { INTEREST_OPTIONS, LANGUAGE_OPTIONS } from '../constants/profileOptions';
 
 export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   const [targetLanguage, setTargetLanguage] = useState('Portuguese');
   const [languageQuery, setLanguageQuery] = useState('');
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
-  const [interestsInput, setInterestsInput] = useState('technology,music');
+  const [selectedInterests, setSelectedInterests] = useState<string[]>(['technology', 'music']);
   const [frequencyHours, setFrequencyHours] = useState('24');
   const filteredLanguages = LANGUAGE_OPTIONS.filter((lang) =>
     lang.toLowerCase().includes(languageQuery.trim().toLowerCase()),
@@ -43,6 +20,12 @@ export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
     setFrequencyHours(String(next));
   };
 
+  const toggleInterest = (interest: string) => {
+    setSelectedInterests((prev) =>
+      prev.includes(interest) ? prev.filter((i) => i !== interest) : [...prev, interest],
+    );
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Set up your learning profile</Text>
@@ -52,9 +35,21 @@ export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
         <Text>{targetLanguage}</Text>
       </Pressable>
 
-      <Text style={styles.label}>Interests (comma-separated)</Text>
-      <TextInput value={interestsInput} onChangeText={setInterestsInput} style={styles.input} />
-      <Text style={styles.hint}>Try: {SUGGESTED_INTERESTS.join(', ')}</Text>
+      <Text style={styles.label}>Interests</Text>
+      <View style={styles.chipsWrap}>
+        {INTEREST_OPTIONS.map((interest) => {
+          const active = selectedInterests.includes(interest);
+          return (
+            <Pressable
+              key={interest}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => toggleInterest(interest)}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{interest}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       <Text style={styles.label}>Notification frequency (hours)</Text>
       <View style={styles.frequencyRow}>
@@ -75,13 +70,9 @@ export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
       <Button
         title="Finish setup"
         onPress={async () => {
-          const interests = interestsInput
-            .split(',')
-            .map((v) => v.trim())
-            .filter(Boolean);
           const hours = Number(frequencyHours);
 
-          if (!targetLanguage.trim() || interests.length === 0 || !Number.isFinite(hours) || hours < 1) {
+          if (!targetLanguage.trim() || selectedInterests.length === 0 || !Number.isFinite(hours) || hours < 1) {
             Alert.alert('Invalid setup', 'Please fill language, interests, and a valid frequency.');
             return;
           }
@@ -89,7 +80,7 @@ export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
           try {
             await createProfile({
               targetLanguage: targetLanguage.trim(),
-              interests,
+              interests: selectedInterests,
               checkFrequencyHours: hours,
             });
             onComplete();
@@ -172,4 +163,16 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: '700' },
   languagesList: { maxHeight: 320 },
   languageOption: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: '#f8fafc',
+  },
+  chipActive: { backgroundColor: '#111827', borderColor: '#111827' },
+  chipText: { color: '#111827', textTransform: 'capitalize' },
+  chipTextActive: { color: '#fff' },
 });
