@@ -196,18 +196,44 @@ export function ChatScreen() {
         setConversationId(updated.id);
         setMessages(updated.messages || []);
       } else {
-        const updated = await sendMessage(conversationId, {
-          message: text,
-          targetLanguage,
-        });
-        setMessages(updated.messages || []);
+        try {
+          const updated = await sendMessage(conversationId, {
+            message: text,
+            targetLanguage,
+          });
+          setMessages(updated.messages || []);
+        } catch (sendErr: any) {
+          const status = sendErr?.response?.status;
+          if (status === 404) {
+            const restarted = await startConversation({
+              profileId: p.profileId,
+              topic: text,
+            });
+            const updated = await sendMessage(restarted.id, {
+              message: text,
+              targetLanguage: p.targetLanguage,
+            });
+            setConversationId(updated.id);
+            setMessages(updated.messages || []);
+          } else {
+            throw sendErr;
+          }
+        }
       }
-    } catch {
+    } catch (error: any) {
+      const backendMessage =
+        error?.response?.data?.message ||
+        (Array.isArray(error?.response?.data?.error)
+          ? error.response.data.error.join(', ')
+          : error?.response?.data?.error) ||
+        error?.message ||
+        'Message failed to send. Please try again.';
+
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: 'Message failed to send. Please try again.',
+          content: `Send failed: ${backendMessage}`,
           timestamp: new Date().toISOString(),
         },
       ]);
