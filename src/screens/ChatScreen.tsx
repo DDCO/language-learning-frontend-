@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProfiles, updateProfileCheckFrequency, updateProfileInterests } from '../api/profile';
-import { sendMessage, startConversation, ConversationMessage } from '../api/conversation';
+import { getConversations, sendMessage, startConversation, ConversationMessage } from '../api/conversation';
 import { useAuth } from '../context/AuthContext';
 
 export function ChatScreen() {
@@ -71,6 +71,31 @@ export function ChatScreen() {
       hideSub.remove();
     };
   }, [composerBottom, insets.bottom]);
+
+  React.useEffect(() => {
+    const loadLatestConversation = async () => {
+      try {
+        const profiles = await getProfiles();
+        if (profiles.length) {
+          setProfileId(profiles[0].id);
+          setTargetLanguage(profiles[0].targetLanguage);
+          setInterestsInput((profiles[0].interests || []).join(','));
+          setFrequencyHours(String(profiles[0].checkFrequencyHours || 24));
+        }
+
+        const response = await getConversations({ page: 1, limit: 1 });
+        const latest = response.items?.[0];
+        if (latest) {
+          setConversationId(latest.id);
+          setMessages(latest.messages || []);
+        }
+      } catch {
+        // no-op: allow empty chat for first-time users
+      }
+    };
+
+    loadLatestConversation();
+  }, []);
 
   const openSidebar = async () => {
     try {

@@ -14,6 +14,13 @@ export type ConversationDetail = {
   messages: ConversationMessage[];
 };
 
+export type ConversationListResponse = {
+  items: ConversationDetail[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
 export async function startConversation(payload: {
   profileId: string;
   topic: string;
@@ -31,5 +38,10 @@ export async function sendMessage(
     `/conversations/${conversationId}/messages`,
     payload,
   );
+  return res.data.data;
+}
+
+export async function getConversations(params?: { page?: number; limit?: number; status?: string }) {
+  const res = await api.get<ApiEnvelope<ConversationListResponse>>('/conversations', { params });
   return res.data.data;
 }
