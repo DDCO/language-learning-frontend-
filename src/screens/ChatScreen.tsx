@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import {
   Alert,
   Animated,
@@ -19,6 +20,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProfiles, updateProfileCheckFrequency, updateProfileInterests } from '../api/profile';
 import { getConversations, sendMessage, startConversation, ConversationMessage } from '../api/conversation';
 import { useAuth } from '../context/AuthContext';
+
+const CHAT_CACHE_KEY = 'chat:lastConversation:v1';
 
 export function ChatScreen() {
   const insets = useSafeAreaInsets();
@@ -75,6 +78,13 @@ export function ChatScreen() {
   React.useEffect(() => {
     const loadLatestConversation = async () => {
       try {
+        const cached = await SecureStore.getItemAsync(CHAT_CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached) as { conversationId?: string; messages?: ConversationMessage[] };
+          if (parsed.conversationId) setConversationId(parsed.conversationId);
+          if (parsed.messages?.length) setMessages(parsed.messages);
+        }
+
         const profiles = await getProfiles();
         if (profiles.length) {
           setProfileId(profiles[0].id);
@@ -88,6 +98,10 @@ export function ChatScreen() {
         if (latest) {
           setConversationId(latest.id);
           setMessages(latest.messages || []);
+          await SecureStore.setItemAsync(
+            CHAT_CACHE_KEY,
+            JSON.stringify({ conversationId: latest.id, messages: latest.messages || [] }),
+          );
         }
       } catch {
         // no-op: allow empty chat for first-time users
@@ -96,6 +110,20 @@ export function ChatScreen() {
 
     loadLatestConversation();
   }, []);
+
+  React.useEffect(() => {
+    const persist = async () => {
+      try {
+        await SecureStore.setItemAsync(
+          CHAT_CACHE_KEY,
+          JSON.stringify({ conversationId, messages }),
+        );
+      } catch {
+        // no-op
+      }
+    };
+    persist();
+  }, [conversationId, messages]);
 
   const openSidebar = async () => {
     try {
