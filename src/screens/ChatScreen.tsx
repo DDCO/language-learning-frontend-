@@ -5,7 +5,7 @@ import {
   Button,
   Easing,
   FlatList,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Pressable,
   StyleSheet,
@@ -31,6 +31,24 @@ export function ChatScreen() {
   const [frequencyHours, setFrequencyHours] = useState('24');
   const [busy, setBusy] = useState(false);
   const [slideX] = useState(new Animated.Value(320));
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  React.useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates?.height || 0);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const openSidebar = async () => {
     try {
@@ -152,11 +170,7 @@ export function ChatScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 16 : 24}
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Chat</Text>
         <TouchableOpacity style={styles.avatarButton} onPress={openSidebar}>
@@ -179,7 +193,7 @@ export function ChatScreen() {
         ListEmptyComponent={<Text style={{ color: '#666' }}>Start chatting to begin your conversation.</Text>}
       />
 
-      <View style={styles.inputRow}>
+      <View style={[styles.inputRow, { marginBottom: keyboardHeight > 0 ? keyboardHeight : 0 }]}>
         <TextInput
           value={input}
           onChangeText={setInput}
@@ -239,7 +253,7 @@ export function ChatScreen() {
           </View>
         )}
       </Animated.View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
