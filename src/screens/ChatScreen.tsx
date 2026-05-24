@@ -38,14 +38,7 @@ export function ChatScreen() {
   const [busy, setBusy] = useState(false);
   const [slideX] = useState(new Animated.Value(320));
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [composerHeight, setComposerHeight] = useState(72);
-  const [composerBottom] = useState(new Animated.Value(12));
   const listRef = React.useRef<FlatList<ConversationMessage>>(null);
-  const listBottomInset =
-    composerHeight +
-    (keyboardHeight > 0
-      ? keyboardHeight + (Platform.OS === 'android' ? 20 : 24)
-      : insets.bottom + 16);
 
   const scrollToBottom = React.useCallback((animated = true) => {
     requestAnimationFrame(() => {
@@ -63,35 +56,23 @@ export function ChatScreen() {
       const coveredByKeyboard = Math.max(0, Dimensions.get('screen').height - keyboardTopY);
       const effectiveKeyboardHeight = Math.max(rawKeyboardHeight, coveredByKeyboard);
       setKeyboardHeight(effectiveKeyboardHeight);
-      const targetBottom = effectiveKeyboardHeight + (Platform.OS === 'android' ? 6 : 8);
-      Animated.timing(composerBottom, {
-        toValue: targetBottom,
-        duration: Platform.OS === 'ios' ? 220 : 180,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }).start(() => scrollToBottom());
+      setTimeout(() => scrollToBottom(), Platform.OS === 'ios' ? 120 : 60);
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
-      Animated.timing(composerBottom, {
-        toValue: insets.bottom + 8,
-        duration: Platform.OS === 'ios' ? 220 : 180,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }).start();
     });
 
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, [composerBottom, insets.bottom, scrollToBottom]);
+  }, [scrollToBottom]);
 
   React.useEffect(() => {
     if (messages.length) {
       scrollToBottom(false);
     }
-  }, [messages.length, keyboardHeight, listBottomInset, scrollToBottom]);
+  }, [messages.length, keyboardHeight, scrollToBottom]);
 
   const readCachedChat = async (): Promise<{ conversationId?: string; messages?: ConversationMessage[] } | null> => {
     try {
@@ -323,17 +304,13 @@ export function ChatScreen() {
 
       <FlatList
         ref={listRef}
-        style={[styles.messagesList, { marginBottom: listBottomInset }]}
+        style={styles.messagesList}
         data={sortedMessages}
         keyExtractor={(_, i) => String(i)}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator
         persistentScrollbar={Platform.OS === 'android'}
-        scrollIndicatorInsets={{ bottom: listBottomInset }}
-        contentContainerStyle={[
-          styles.list,
-          { paddingBottom: 12 },
-        ]}
+        contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
             <Text style={styles.role}>{item.role === 'user' ? 'You' : 'Tutor'}</Text>
@@ -343,13 +320,7 @@ export function ChatScreen() {
         ListEmptyComponent={<Text style={{ color: '#666' }}>Start chatting to begin your conversation.</Text>}
       />
 
-      <Animated.View
-        onLayout={(e) => setComposerHeight(e.nativeEvent.layout.height)}
-        style={[
-          styles.inputRow,
-          { bottom: composerBottom },
-        ]}
-      >
+      <View style={[styles.inputRow, { paddingBottom: insets.bottom + 8 }]}> 
         <TextInput
           value={input}
           onChangeText={setInput}
@@ -359,7 +330,7 @@ export function ChatScreen() {
           editable={!busy}
         />
         <Button title={busy ? '...' : 'Send'} onPress={onSend} disabled={busy} />
-      </Animated.View>
+      </View>
 
       {sidebarOpen && <Pressable style={styles.overlay} onPress={closeSidebar} />}
 
@@ -429,15 +400,12 @@ const styles = StyleSheet.create({
   role: { fontSize: 12, color: '#666', marginBottom: 4 },
   messageText: { flexShrink: 1, flexWrap: 'wrap' },
   inputRow: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
     backgroundColor: 'transparent',
+    paddingHorizontal: 0,
     paddingTop: 8,
-    paddingBottom: 8,
   },
   input: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
   overlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.25)' },
