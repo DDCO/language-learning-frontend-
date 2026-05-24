@@ -1,5 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Animated, Button, Easing, FlatList, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Animated,
+  Button,
+  Easing,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { getProfiles, updateProfileCheckFrequency, updateProfileInterests } from '../api/profile';
 import { sendMessage, startConversation, ConversationMessage } from '../api/conversation';
 import { useAuth } from '../context/AuthContext';
@@ -90,6 +104,13 @@ export function ChatScreen() {
     if (!input.trim() || busy) return;
 
     const text = input.trim();
+    const optimisticMessage: ConversationMessage = {
+      role: 'user',
+      content: text,
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, optimisticMessage]);
     setInput('');
     setBusy(true);
 
@@ -116,13 +137,26 @@ export function ChatScreen() {
         });
         setMessages(updated.messages || []);
       }
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Message failed to send. Please try again.',
+          timestamp: new Date().toISOString(),
+        },
+      ]);
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 16 : 0}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Chat</Text>
         <TouchableOpacity style={styles.avatarButton} onPress={openSidebar}>
@@ -156,7 +190,7 @@ export function ChatScreen() {
 
       {sidebarOpen && <Pressable style={styles.overlay} onPress={closeSidebar} />}
 
-      <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideX }] }]}>
+      <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideX }] }]}> 
         {sidebarView === 'menu' ? (
           <View style={styles.sidebarContent}>
             <View style={styles.profileHeader}>
@@ -203,7 +237,7 @@ export function ChatScreen() {
           </View>
         )}
       </Animated.View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
