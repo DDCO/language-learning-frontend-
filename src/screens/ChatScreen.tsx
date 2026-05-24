@@ -14,11 +14,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProfiles, updateProfileCheckFrequency, updateProfileInterests } from '../api/profile';
 import { sendMessage, startConversation, ConversationMessage } from '../api/conversation';
 import { useAuth } from '../context/AuthContext';
 
 export function ChatScreen() {
+  const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
@@ -33,23 +35,38 @@ export function ChatScreen() {
   const [slideX] = useState(new Animated.Value(320));
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [composerHeight, setComposerHeight] = useState(72);
+  const [composerBottom] = useState(new Animated.Value(12));
 
   React.useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardHeight(e.endCoordinates?.height || 0);
+      const rawKeyboardHeight = e.endCoordinates?.height || 0;
+      setKeyboardHeight(rawKeyboardHeight);
+      const targetBottom = Math.max(rawKeyboardHeight - insets.bottom, 0) + 8;
+      Animated.timing(composerBottom, {
+        toValue: targetBottom,
+        duration: Platform.OS === 'ios' ? 220 : 180,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
+      Animated.timing(composerBottom, {
+        toValue: insets.bottom + 8,
+        duration: Platform.OS === 'ios' ? 220 : 180,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
     });
 
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, []);
+  }, [composerBottom, insets.bottom]);
 
   const openSidebar = async () => {
     try {
@@ -186,7 +203,11 @@ export function ChatScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.list,
-          { paddingBottom: composerHeight + (keyboardHeight > 0 ? keyboardHeight + 20 : 16) },
+          {
+            paddingBottom:
+              composerHeight +
+              (keyboardHeight > 0 ? Math.max(keyboardHeight - insets.bottom, 0) + 24 : insets.bottom + 16),
+          },
         ]}
         renderItem={({ item }) => (
           <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
@@ -197,11 +218,11 @@ export function ChatScreen() {
         ListEmptyComponent={<Text style={{ color: '#666' }}>Start chatting to begin your conversation.</Text>}
       />
 
-      <View
+      <Animated.View
         onLayout={(e) => setComposerHeight(e.nativeEvent.layout.height)}
         style={[
           styles.inputRow,
-          { bottom: keyboardHeight > 0 ? keyboardHeight + 12 : 12 },
+          { bottom: composerBottom },
         ]}
       >
         <TextInput
@@ -212,7 +233,7 @@ export function ChatScreen() {
           editable={!busy}
         />
         <Button title={busy ? '...' : 'Send'} onPress={onSend} disabled={busy} />
-      </View>
+      </Animated.View>
 
       {sidebarOpen && <Pressable style={styles.overlay} onPress={closeSidebar} />}
 
