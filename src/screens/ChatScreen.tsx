@@ -32,6 +32,7 @@ export function ChatScreen() {
   const [busy, setBusy] = useState(false);
   const [slideX] = useState(new Animated.Value(320));
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [composerHeight, setComposerHeight] = useState(72);
 
   React.useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -183,7 +184,10 @@ export function ChatScreen() {
         data={sortedMessages}
         keyExtractor={(_, i) => String(i)}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[
+          styles.list,
+          { paddingBottom: composerHeight + (keyboardHeight > 0 ? keyboardHeight + 20 : 16) },
+        ]}
         renderItem={({ item }) => (
           <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
             <Text style={styles.role}>{item.role === 'user' ? 'You' : 'Tutor'}</Text>
@@ -193,7 +197,13 @@ export function ChatScreen() {
         ListEmptyComponent={<Text style={{ color: '#666' }}>Start chatting to begin your conversation.</Text>}
       />
 
-      <View style={[styles.inputRow, { marginBottom: keyboardHeight > 0 ? keyboardHeight : 0 }]}>
+      <View
+        onLayout={(e) => setComposerHeight(e.nativeEvent.layout.height)}
+        style={[
+          styles.inputRow,
+          { bottom: keyboardHeight > 0 ? keyboardHeight + 12 : 12 },
+        ]}
+      >
         <TextInput
           value={input}
           onChangeText={setInput}
@@ -270,7 +280,18 @@ const styles = StyleSheet.create({
   userBubble: { backgroundColor: '#daf0ff', alignSelf: 'flex-end' },
   aiBubble: { backgroundColor: '#f2f2f2', alignSelf: 'flex-start' },
   role: { fontSize: 12, color: '#666', marginBottom: 4 },
-  inputRow: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingBottom: 16 },
+  inputRow: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 8,
+  },
   input: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
   overlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.25)' },
   sidebar: {
