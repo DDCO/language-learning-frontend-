@@ -44,7 +44,7 @@ export function ChatScreen() {
     const showSub = Keyboard.addListener(showEvent, (e) => {
       const rawKeyboardHeight = e.endCoordinates?.height || 0;
       setKeyboardHeight(rawKeyboardHeight);
-      const targetBottom = Math.max(rawKeyboardHeight - insets.bottom, 0) + 8;
+      const targetBottom = rawKeyboardHeight + 8;
       Animated.timing(composerBottom, {
         toValue: targetBottom,
         duration: Platform.OS === 'ios' ? 220 : 180,
@@ -206,7 +206,7 @@ export function ChatScreen() {
           {
             paddingBottom:
               composerHeight +
-              (keyboardHeight > 0 ? Math.max(keyboardHeight - insets.bottom, 0) + 24 : insets.bottom + 16),
+              (keyboardHeight > 0 ? keyboardHeight + 24 : insets.bottom + 16),
           },
         ]}
         renderItem={({ item }) => (
@@ -308,10 +308,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#f9fafb',
     borderTopWidth: 1,
     borderTopColor: '#eee',
     paddingTop: 8,
+    paddingBottom: 8,
   },
   input: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
   overlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.25)' },
