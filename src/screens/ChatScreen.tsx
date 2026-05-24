@@ -154,8 +154,8 @@ export function ChatScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 16 : 0}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 16 : 24}
     >
       <View style={styles.header}>
         <Text style={styles.title}>Chat</Text>
@@ -165,8 +165,10 @@ export function ChatScreen() {
       </View>
 
       <FlatList
+        style={styles.messagesList}
         data={sortedMessages}
         keyExtractor={(_, i) => String(i)}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
@@ -249,6 +251,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 18 },
   title: { fontSize: 24, fontWeight: '700' },
   list: { gap: 8, paddingVertical: 8 },
+  messagesList: { flex: 1 },
   bubble: { borderRadius: 10, padding: 10 },
   userBubble: { backgroundColor: '#daf0ff', alignSelf: 'flex-end' },
   aiBubble: { backgroundColor: '#f2f2f2', alignSelf: 'flex-start' },
