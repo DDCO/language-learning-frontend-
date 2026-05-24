@@ -40,6 +40,13 @@ export function ChatScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [composerHeight, setComposerHeight] = useState(72);
   const [composerBottom] = useState(new Animated.Value(12));
+  const listRef = React.useRef<FlatList<ConversationMessage>>(null);
+
+  const scrollToBottom = React.useCallback((animated = true) => {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToEnd({ animated });
+    });
+  }, []);
 
   React.useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -57,7 +64,7 @@ export function ChatScreen() {
         duration: Platform.OS === 'ios' ? 220 : 180,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: false,
-      }).start();
+      }).start(() => scrollToBottom());
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
@@ -73,7 +80,13 @@ export function ChatScreen() {
       showSub.remove();
       hideSub.remove();
     };
-  }, [composerBottom, insets.bottom]);
+  }, [composerBottom, insets.bottom, scrollToBottom]);
+
+  React.useEffect(() => {
+    if (messages.length) {
+      scrollToBottom(false);
+    }
+  }, [messages.length, keyboardHeight, scrollToBottom]);
 
   const readCachedChat = async (): Promise<{ conversationId?: string; messages?: ConversationMessage[] } | null> => {
     try {
@@ -304,6 +317,7 @@ export function ChatScreen() {
       </View>
 
       <FlatList
+        ref={listRef}
         style={styles.messagesList}
         data={sortedMessages}
         keyExtractor={(_, i) => String(i)}
