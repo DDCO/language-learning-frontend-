@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Button, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Animated, Button, Easing, FlatList, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { getProfiles, updateProfileCheckFrequency, updateProfileInterests } from '../api/profile';
 import { sendMessage, startConversation, ConversationMessage } from '../api/conversation';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +16,34 @@ export function ChatScreen() {
   const [interestsInput, setInterestsInput] = useState('');
   const [frequencyHours, setFrequencyHours] = useState('24');
   const [busy, setBusy] = useState(false);
+  const [slideX] = useState(new Animated.Value(320));
+
+  const openSidebar = async () => {
+    try {
+      await ensureProfile();
+      setSidebarView('menu');
+      setSidebarOpen(true);
+      Animated.timing(slideX, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } catch {
+      Alert.alert('No profile', 'Please complete setup first.');
+    }
+  };
+
+  const closeSidebar = () => {
+    Animated.timing(slideX, {
+      toValue: 320,
+      duration: 180,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setSidebarOpen(false);
+    });
+  };
 
   const sortedMessages = useMemo(
     () => [...messages].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
@@ -97,15 +125,9 @@ export function ChatScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Chat</Text>
-        <Button title="Profile" onPress={async () => {
-          try {
-            await ensureProfile();
-            setSidebarView('menu');
-            setSidebarOpen(true);
-          } catch {
-            Alert.alert('No profile', 'Please complete setup first.');
-          }
-        }} />
+        <TouchableOpacity style={styles.avatarButton} onPress={openSidebar}>
+          <View style={styles.avatarCircle}><Text style={styles.avatarText}>👤</Text></View>
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -132,15 +154,28 @@ export function ChatScreen() {
         <Button title={busy ? '...' : 'Send'} onPress={onSend} disabled={busy} />
       </View>
 
-      {sidebarOpen && <Pressable style={styles.overlay} onPress={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <Pressable style={styles.overlay} onPress={closeSidebar} />}
 
-      <View style={[styles.sidebar, sidebarOpen ? styles.sidebarOpen : styles.sidebarClosed]}>
+      <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideX }] }]}>
         {sidebarView === 'menu' ? (
           <View style={styles.sidebarContent}>
-            <Text style={styles.sidebarTitle}>Menu</Text>
-            <Button title="Edit profile" onPress={() => setSidebarView('edit')} />
-            <View style={{ height: 12 }} />
-            <Button title="Logout" color="#b91c1c" onPress={signOut} disabled={busy} />
+            <View style={styles.profileHeader}>
+              <View style={styles.avatarLarge}><Text style={styles.avatarLargeText}>👤</Text></View>
+              <View>
+                <Text style={styles.sidebarTitle}>Your profile</Text>
+                <Text style={styles.subtle}>{targetLanguage} learner</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.menuCard} onPress={() => setSidebarView('edit')}>
+              <Text style={styles.menuTitle}>Edit profile</Text>
+              <Text style={styles.subtle}>Interests and refresh frequency</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.menuCard, styles.logoutCard]} onPress={signOut} disabled={busy}>
+              <Text style={[styles.menuTitle, styles.logoutText]}>Logout</Text>
+              <Text style={styles.subtle}>Sign out of this account</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.sidebarContent}>
@@ -148,22 +183,26 @@ export function ChatScreen() {
             <Text style={styles.label}>Target language</Text>
             <Text style={styles.readonly}>{targetLanguage}</Text>
             <Text style={styles.label}>Interests (comma-separated)</Text>
-            <TextInput value={interestsInput} onChangeText={setInterestsInput} style={styles.input} editable={!busy} />
+            <TextInput value={interestsInput} onChangeText={setInterestsInput} style={styles.settingsInput} editable={!busy} />
             <Text style={styles.label}>Check frequency (hours)</Text>
             <TextInput
               value={frequencyHours}
               onChangeText={setFrequencyHours}
               keyboardType="number-pad"
-              style={styles.input}
+              style={styles.settingsInput}
               editable={!busy}
             />
             <View style={styles.modalActions}>
-              <Button title="Back" onPress={() => setSidebarView('menu')} disabled={busy} />
-              <Button title={busy ? 'Saving...' : 'Save'} onPress={saveProfile} disabled={busy} />
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setSidebarView('menu')} disabled={busy}>
+                <Text>Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.primaryBtn} onPress={saveProfile} disabled={busy}>
+                <Text style={styles.primaryBtnText}>{busy ? 'Saving...' : 'Save'}</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -171,6 +210,9 @@ export function ChatScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 48, paddingHorizontal: 12 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  avatarButton: { padding: 4 },
+  avatarCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 18 },
   title: { fontSize: 24, fontWeight: '700' },
   list: { gap: 8, paddingVertical: 8 },
   bubble: { borderRadius: 10, padding: 10 },
@@ -192,11 +234,21 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingHorizontal: 12,
   },
-  sidebarOpen: { transform: [{ translateX: 0 }] },
-  sidebarClosed: { transform: [{ translateX: 320 }] },
-  sidebarContent: { gap: 8 },
+  sidebarContent: { gap: 10 },
+  profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  avatarLarge: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' },
+  avatarLargeText: { fontSize: 24 },
   sidebarTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
+  subtle: { color: '#6b7280' },
+  menuCard: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, padding: 12, backgroundColor: '#fafafa' },
+  menuTitle: { fontWeight: '700', marginBottom: 2 },
+  logoutCard: { borderColor: '#fecaca', backgroundColor: '#fff5f5' },
+  logoutText: { color: '#b91c1c' },
   modalActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   label: { fontWeight: '600' },
   readonly: { paddingVertical: 4, color: '#444' },
+  settingsInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#fff' },
+  secondaryBtn: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16 },
+  primaryBtn: { backgroundColor: '#111827', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16 },
+  primaryBtnText: { color: '#fff', fontWeight: '700' },
 });
