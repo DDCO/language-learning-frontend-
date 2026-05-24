@@ -3,6 +3,7 @@ import {
   Alert,
   Animated,
   Button,
+  Dimensions,
   Easing,
   FlatList,
   Keyboard,
@@ -43,8 +44,11 @@ export function ChatScreen() {
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
       const rawKeyboardHeight = e.endCoordinates?.height || 0;
-      setKeyboardHeight(rawKeyboardHeight);
-      const targetBottom = rawKeyboardHeight + (Platform.OS === 'android' ? 4 : 8);
+      const keyboardTopY = e.endCoordinates?.screenY ?? Dimensions.get('screen').height;
+      const coveredByKeyboard = Math.max(0, Dimensions.get('screen').height - keyboardTopY);
+      const effectiveKeyboardHeight = Math.max(rawKeyboardHeight, coveredByKeyboard);
+      setKeyboardHeight(effectiveKeyboardHeight);
+      const targetBottom = effectiveKeyboardHeight + (Platform.OS === 'android' ? 6 : 8);
       Animated.timing(composerBottom, {
         toValue: targetBottom,
         duration: Platform.OS === 'ios' ? 220 : 180,
