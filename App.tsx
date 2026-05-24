@@ -25,8 +25,11 @@ function RootNavigator() {
       }
 
       setCheckingProfile(true);
+      setupNotifications().catch(() => {
+        // Do not block app routing on notification setup failure.
+      });
+
       try {
-        await setupNotifications();
         const profiles = await getProfiles();
         setHasProfile(profiles.length > 0);
       } catch {
