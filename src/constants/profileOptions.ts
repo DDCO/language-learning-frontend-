@@ -38,3 +38,21 @@ export const INTEREST_OPTIONS = [
   'nature',
   'education',
 ] as const;
+
+export const REDDIT_TOPIC_SOURCE_MAP: Record<string, string> = {
+  technology: 'technology',
+  sports: 'sports',
+  music: 'music',
+  movies: 'movies',
+  history: 'history',
+  science: 'science',
+  business: 'business',
+  health: 'health',
+  travel: 'travel',
+  food: 'food',
+  gaming: 'gaming',
+  art: 'art',
+  politics: 'politics',
+  nature: 'nature',
+  education: 'education',
+};

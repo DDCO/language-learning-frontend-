@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { AppState } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import {
   Alert,
@@ -20,7 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProfiles, updateProfileCheckFrequency, updateProfileInterests } from '../api/profile';
 import { getConversations, sendMessage, startConversation, ConversationMessage } from '../api/conversation';
 import { useAuth } from '../context/AuthContext';
-import { INTEREST_OPTIONS } from '../constants/profileOptions';
+import { INTEREST_OPTIONS, REDDIT_TOPIC_SOURCE_MAP } from '../constants/profileOptions';
 
 const CHAT_CACHE_PATH = `${FileSystem.documentDirectory}chat-last-conversation-v1.json`;
 const normalizeInterest = (v: string) => v.trim().toLowerCase();
@@ -218,7 +219,23 @@ export function ChatScreen() {
 
     setBusy(true);
     try {
-      await updateProfileInterests(p.profileId, selectedInterests.map(normalizeInterest));
+      const normalizedInterests = selectedInterests.map(normalizeInterest);
+      const redditItems = normalizedInterests
+        .map((interest) => REDDIT_TOPIC_SOURCE_MAP[interest])
+        .filter(Boolean);
+
+      await updateProfileInterests(
+        p.profileId,
+        normalizedInterests,
+        redditItems.length
+          ? [
+              {
+                source: 'reddit',
+                items: redditItems,
+              },
+            ]
+          : undefined,
+      );
       await updateProfileCheckFrequency(p.profileId, hours);
       setSidebarView('menu');
     } catch {
@@ -263,6 +280,7 @@ export function ChatScreen() {
           const updated = await sendMessage(conversationId, {
             message: text,
             targetLanguage,
+            appState: AppState.currentState as 'active' | 'background' | 'inactive',
           });
           setMessages(updated.messages || []);
         } catch (sendErr: any) {
@@ -275,6 +293,7 @@ export function ChatScreen() {
             const updated = await sendMessage(restarted.id, {
               message: text,
               targetLanguage: p.targetLanguage,
+              appState: AppState.currentState as 'active' | 'background' | 'inactive',
             });
             setConversationId(updated.id);
             setMessages(updated.messages || []);

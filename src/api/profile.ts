@@ -5,6 +5,10 @@ export type CreateProfilePayload = {
   targetLanguage: string;
   interests: string[];
   checkFrequencyHours: number;
+  topicSources?: {
+    source: string;
+    items: string[];
+  }[];
 };
 
 export async function getProfiles() {
@@ -17,8 +21,18 @@ export async function createProfile(payload: CreateProfilePayload) {
   return res.data.data;
 }
 
-export async function updateProfileInterests(profileId: string, interests: string[]) {
-  const res = await api.patch<ApiEnvelope<Profile>>(`/profiles/${profileId}/interests`, { interests });
+export async function updateProfileInterests(
+  profileId: string,
+  interests: string[],
+  topicSources?: {
+    source: string;
+    items: string[];
+  }[],
+) {
+  const res = await api.patch<ApiEnvelope<Profile>>(`/profiles/${profileId}/interests`, {
+    interests,
+    topicSources,
+  });
   return res.data.data;
 }
 

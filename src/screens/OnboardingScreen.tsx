@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Button, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createProfile } from '../api/profile';
-import { INTEREST_OPTIONS, LANGUAGE_OPTIONS } from '../constants/profileOptions';
+import { INTEREST_OPTIONS, LANGUAGE_OPTIONS, REDDIT_TOPIC_SOURCE_MAP } from '../constants/profileOptions';
 
 export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   const [targetLanguage, setTargetLanguage] = useState('Portuguese');
@@ -78,10 +78,22 @@ export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
           }
 
           try {
+            const redditItems = selectedInterests
+              .map((interest) => REDDIT_TOPIC_SOURCE_MAP[interest])
+              .filter(Boolean);
+
             await createProfile({
               targetLanguage: targetLanguage.trim(),
               interests: selectedInterests,
               checkFrequencyHours: hours,
+              topicSources: redditItems.length
+                ? [
+                    {
+                      source: 'reddit',
+                      items: redditItems,
+                    },
+                  ]
+                : undefined,
             });
             onComplete();
           } catch {

@@ -32,7 +32,11 @@ export async function startConversation(payload: {
 
 export async function sendMessage(
   conversationId: string,
-  payload: { message: string; targetLanguage: string },
+  payload: {
+    message: string;
+    targetLanguage: string;
+    appState?: 'active' | 'background' | 'inactive';
+  },
 ) {
   const res = await api.post<ApiEnvelope<ConversationDetail>>(
     `/conversations/${conversationId}/messages`,
